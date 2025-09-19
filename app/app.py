@@ -5,12 +5,14 @@ from .states import CHOOSING_STUDENTS
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
 
-
-logger = logging.getLogger(__name__)
-
+# TODO: Time to live of callback query
+students: tuple[str, ...] = ("Тестов И.П.", "Русков А.П.", "Новосел Т.П.")
 reasons: dict[str, str] = {"valid": "🎓 Увж. причина",
                            "sick": "😷 Болеет", 
                            "not_valid": "🚶 Прогуливает" }
+
+
+logger = logging.getLogger(__name__)
 
 # TODO: Пускай кол-во уроков будет после вызова команды. Чтобы потом можно было выбирать по классам например
 async def daily_blanks(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -41,7 +43,7 @@ async def receive_days(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         return ConversationHandler.END
     except ValueError:
         await update.message.reply_markdown(
-            text="😢 Я понимаю только цифры. Нужно ввести число и тогда мы сможем продолжить!"
+            text="😢 Нужно ввести число и тогда мы сможем продолжить!"
         )
         
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -57,13 +59,13 @@ async def show_students(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     Show and choose a students.
     yes i do dsfsd
     """
-    # TODO: get students from DB
-    students: tuple[str, ...] = ("Тестов И.П.", "Русков А.П.", "Новосел Т.П.")
+    # TODO: get students from DB. 
+    # Here need in the DB level check about existing data in db.
     keyboard = [
         [InlineKeyboardButton(text=f"{student}", callback_data=f"student_{student}") for student in students]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
+
     query = update.callback_query
     message_data = {
         "text": "Выбери ученика для которого нужно внести запись",
@@ -119,27 +121,32 @@ async def skipped_count(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     await query.answer()
     
     student_data = context.user_data.get('current_student')
+    base_keyboard: list[Any] = [InlineKeyboardButton(
+        "⬅️ Вернуться назад к ученикам", callback_data="back2show_students"
+    )]
     
-    if query.data == 'all_lessons':
-        skip_count: int = context.user_data.get("total_lessons", 0)
-        text: str = f"Отмечено {skip_count} уроков для {student_data.get("name")}"
-    else:
+    if query.data == 'all_lessons' or 'count_' in query.data:
+        if 'count_' in query.data:
+            skip_count: int = int(query.data.replace("count_", ""))
+        else:
+            skip_count: int = context.user_data.get("total_lessons", 0)
+        text: str = f"Отмечено {skip_count} уроков для {student_data.get("name")} по причине {student_data.get("reason")}"
+        await query.edit_message_text(
+            text=text,
+            reply_markup=InlineKeyboardMarkup([base_keyboard])
+        )
+        return
+        
+    if query.data == 'specify_count':
         keyboard: list[list[InlineKeyboardButton]] = []
-        for i in range(1, student_data.get('total_lessons')+1):
+        for i in range(1, context.user_data.get('total_lessons')+1):
             if i % 3 == 1:
                 keyboard.append([])
             keyboard[-1].append(InlineKeyboardButton(str(i), callback_data=f"count_{i}"))
             
         keyboard.append([InlineKeyboardButton("Все уроки", callback_data="all_lessons")])
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        text: str = f"{student_data.get("name")} \n Выбери кол-во пропущенных уроков:"
-
         await query.edit_message_text(
-            text=text,
-            reply_markup=reply_markup
+            text=f"{student_data.get("name")} \n Выбери кол-во пропущенных уроков:",
+            reply_markup=InlineKeyboardMarkup(keyboard)
         )
         return
-    
-    await query.edit_message_text(
-        text=text
-    )

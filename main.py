@@ -42,7 +42,7 @@ def main() -> None:
     _app.add_handler(CallbackQueryHandler(callback=student_selected, pattern=r"^student_"))
     _app.add_handler(CallbackQueryHandler(callback=reason_selected, pattern=r"^reason_"))
     _app.add_handler(CallbackQueryHandler(callback=show_students, pattern=r"back2show_students"))
-    _app.add_handler(CallbackQueryHandler(callback=skipped_count, pattern=r"^all_lessons|^count_"))
+    _app.add_handler(CallbackQueryHandler(callback=skipped_count, pattern=r"^all_lessons|specify_count|count_"))
     
     _app.run_polling(allowed_updates=Update.ALL_TYPES)
     
