@@ -1,3 +1,4 @@
+from typing import Any
 from datetime import date
 import logging
 from .states import CHOOSING_STUDENTS
@@ -7,33 +8,54 @@ from telegram.ext import ContextTypes, ConversationHandler
 
 logger = logging.getLogger(__name__)
 
-async def today(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+reasons: dict[str, str] = {"valid": "🎓 Увж. причина",
+                           "sick": "😷 Болеет", 
+                           "not_valid": "🚶 Прогуливает" }
+
+# TODO: Пускай кол-во уроков будет после вызова команды. Чтобы потом можно было выбирать по классам например
+async def daily_blanks(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """
     Start point to get info about day
     """
     # TODO: check if day exist
+    await update.message.reply_markdown(
+        f"Давай заполним пропуски за {date.today().strftime("%d.%m.%Y")}!\n"
+        "\nСколько сегодня всего уроков?"
+    )
+    return 1
     
+       
+async def receive_days(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user_text: str = update.message.text
     try:
-        total_lessons: int = int(context.args[0])
+        # TODO: проверить что не больше 10
+        total_lessons: int = int(user_text)
         # TODO: write connect and store data in DB
         # date: 18.09.2025 
         # lessons: 7
+        context.user_data["total_lessons"] = total_lessons
         await update.message.reply_markdown(
-            text=f"kk, записал {total_lessons} уроков на {date.today().strftime("%d.%m.%Y")}"
+            text=f"Супер, записала {total_lessons} уроков на {date.today().strftime("%d.%m.%Y")}"
         )
         await show_students(update, context)
+        return ConversationHandler.END
     except ValueError:
         await update.message.reply_markdown(
-            text="😢 нужна цифра, пример: `/today 7`, что означает сегодня 7 уроков"
+            text="😢 Я понимаю только цифры. Нужно ввести число и тогда мы сможем продолжить!"
         )
-    except IndexError:
-        await update.message.reply_markdown(
-            text="😢 ты не ввел(a) сколько уроков будет, например: `/today 7`"
-        )
+        
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await update.message.reply_markdown(
+        "Хорошо! Пиши снова если потребуется помощь 😉"
+    )
+    return ConversationHandler.END
+    
+
     
 async def show_students(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Show and choose a students.
+    yes i do dsfsd
     """
     # TODO: get students from DB
     students: tuple[str, ...] = ("Тестов И.П.", "Русков А.П.", "Новосел Т.П.")
@@ -57,24 +79,67 @@ async def student_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     await query.answer()
     
     student_name: str = query.data.replace("student_", "")
+    context.user_data['current_student'] = {
+        "name": student_name
+    }
     
-    reasons: list[str] = ["Увж. причина", "Болеет", "Прогуливает"]
     keyboard = [
-        [InlineKeyboardButton(text=f"{reason}", callback_data=f"reason_{reason}") for reason in reasons] + [InlineKeyboardButton("<<", callback_data="back2show_students")]
+        [InlineKeyboardButton(text=f"{reason}", callback_data=f"reason_{key}") for key, reason in reasons.items()] 
+        ,[InlineKeyboardButton("⬅️ Назад к ученикам", callback_data="back2show_students")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.edit_message_text(
         text=f"По какой причине нет {student_name}?",
         parse_mode="Markdown",
-        reply_markup=reply_markup
-    )
+        reply_markup=reply_markup)
     
 async def reason_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     await query.answer()
     
-    reason_choosed: str = query.data.replace("reason_", "")
+    reason_choosed: str = reasons.get(query.data.replace("reason_", ""))
+    student_data = context.user_data.get('current_student')
+    student_data['reason'] = reason_choosed
+    
+    keyboard = [
+        [InlineKeyboardButton("Все уроки", callback_data="all_lessons")],
+        [InlineKeyboardButton("Указать количество", callback_data="specify_count")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.edit_message_text(
-        text=f"Ура, ты выбрал: {reason_choosed}"
+        f"🗿 Ученик: {student_data.get("name")}"
+        f"\nПричина: {reason_choosed}"
+        "\nСколько пропущенных?",
+        reply_markup=reply_markup
+    )
+
+async def skipped_count(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    await query.answer()
+    
+    student_data = context.user_data.get('current_student')
+    
+    if query.data == 'all_lessons':
+        skip_count: int = context.user_data.get("total_lessons", 0)
+        text: str = f"Отмечено {skip_count} уроков для {student_data.get("name")}"
+    else:
+        keyboard: list[list[InlineKeyboardButton]] = []
+        for i in range(1, student_data.get('total_lessons')+1):
+            if i % 3 == 1:
+                keyboard.append([])
+            keyboard[-1].append(InlineKeyboardButton(str(i), callback_data=f"count_{i}"))
+            
+        keyboard.append([InlineKeyboardButton("Все уроки", callback_data="all_lessons")])
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        text: str = f"{student_data.get("name")} \n Выбери кол-во пропущенных уроков:"
+
+        await query.edit_message_text(
+            text=text,
+            reply_markup=reply_markup
+        )
+        return
+    
+    await query.edit_message_text(
+        text=text
     )
