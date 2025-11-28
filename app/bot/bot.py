@@ -1,27 +1,27 @@
-from app.bot.methods import *
-from app.bot.states import *
-from dotenv import load_dotenv
-import os
 import logging
-import sys
-from typing import Final
 from telegram import Update
-from telegram.ext import ContextTypes, Application, CommandHandler, ConversationHandler, CallbackQueryHandler, MessageHandler, filters
-from app.settings import TG_BOT_TOKEN
-
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+from telegram.ext import (
+    Application, 
+    CommandHandler, 
+    ConversationHandler, 
+    CallbackQueryHandler, 
+    MessageHandler, 
+    filters)
+from app.bot.methods import (
+    daily_blanks, 
+    receive_days,
+    cancel,
+    student_selected,
+    reason_selected,
+    show_students,
+    skipped_count
 )
-logging.getLogger("httpx").setLevel(logging.WARNING)
+from app.bot._exceptions import NullTokenError
+
+
 logger = logging.getLogger(__name__)
 
-def main() -> None:
-    """
-    Start the bot
-    """
-    _app = Application.builder().token(TG_BOT_TOKEN).build()
-    
-    # handlers
+def init_handlers(app: Application) -> None:
     conv_handler: ConversationHandler = ConversationHandler(
         entry_points=[CommandHandler("daily_blanks", daily_blanks)],
         states={
@@ -29,13 +29,20 @@ def main() -> None:
         },
         fallbacks=[MessageHandler(filters=filters.Regex("^Отмена$"), callback=cancel)]
     )
-    _app.add_handler(conv_handler)
+    app.add_handler(conv_handler)
     
-    # _app.add_handler(CommandHandler("daily_blanks", daily_blanks))
-    _app.add_handler(CallbackQueryHandler(callback=student_selected, pattern=r"^student_"))
-    _app.add_handler(CallbackQueryHandler(callback=reason_selected, pattern=r"^reason_"))
-    _app.add_handler(CallbackQueryHandler(callback=show_students, pattern=r"back1show_students"))
-    _app.add_handler(CallbackQueryHandler(callback=skipped_count, pattern=r"^all_lessons|specify_count|count_"))
-    
-    _app.run_polling(allowed_updates=Update.ALL_TYPES)
+    app.add_handler(CallbackQueryHandler(callback=student_selected, pattern=r"^student_"))
+    app.add_handler(CallbackQueryHandler(callback=reason_selected, pattern=r"^reason_"))
+    app.add_handler(CallbackQueryHandler(callback=show_students, pattern=r"back1show_students"))
+    app.add_handler(CallbackQueryHandler(callback=skipped_count, pattern=r"^all_lessons|specify_count|count_"))
+ 
+
+# TODO: Проверить, будет ли работать через отправку через app. Т.к. вроде
+# python не создает копию больших объектов, а передает их по ссылке. Могу ошибаться
+def build_run(token: str) -> None:
+    if not token:
+        raise NullTokenError()
+    app: Application = Application.builder().token(token).build()
+    init_handlers(app)
+    app.run_polling(allowed_updates=Update.ALL_TYPES)
    

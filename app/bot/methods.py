@@ -24,7 +24,7 @@ async def daily_blanks(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         f"Давай заполним пропуски за {date.today().strftime("%d.%m.%Y")}!\n"
         "\nСколько сегодня всего уроков?"
     )
-    return 1
+    return 0
     
        
 async def receive_days(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:

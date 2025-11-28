@@ -10,17 +10,16 @@ class FileChangeHandler(FileSystemEventHandler):
         self._callback = callback
         self._restart = False
     
-    def on_any_event(self, event: FileSystemEvent):
-        if event.is_directory or event.src_path.endswith(".py"):
+    def on_modified(self, event: FileSystemEvent):
+        if (event.is_directory or event.src_path.endswith(".py")) and not event.src_path.__contains__('.venv'):
             if not self._restart:
-                logger.debug(f"Changes in {event.src_path}. Restart!")
-                self._restart = True
+                logger.debug(f"{event.src_path} have been updated. Restarting bot to apply changes...")
+                self._restart = True 
                 self._callback()
     
-def observer_changes(entry_func: Callable) -> None:
+def observer_changes(entry_func: Callable, **kwargs) -> None:
     def on_change_file_callback():
         os.execv(sys.argv[0], sys.argv[:])
-
 
     event_handler = FileChangeHandler(on_change_file_callback)
     observer = Observer()
@@ -28,7 +27,7 @@ def observer_changes(entry_func: Callable) -> None:
     observer.start()
 
     try:
-        entry_func()
+        entry_func(**kwargs)
     except KeyboardInterrupt:
         observer.stop()
     observer.join()
