@@ -1,0 +1,8 @@
+#!/usr/bin/env -S uv run --script
+
+from app import settings, cli
+if __name__ == '__main__':
+    if not settings.PROD:
+        from app.utils.autoreload import autoreload
+        autoreload()
+    cli.entry_point()
