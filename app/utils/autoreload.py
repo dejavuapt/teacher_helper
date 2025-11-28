@@ -1,8 +1,9 @@
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileSystemEvent
 import sys, os, logging
+from typing import Callable
 
-logger = logging.basicConfig(__name__)
+logger = logging.getLogger(__name__)
 
 class FileChangeHandler(FileSystemEventHandler):
     def __init__(self, callback):
@@ -12,26 +13,25 @@ class FileChangeHandler(FileSystemEventHandler):
     def on_any_event(self, event: FileSystemEvent):
         if event.is_directory or event.src_path.endswith(".py"):
             if not self._restart:
-                logger.info(f"Changed in {event.src_path}. Restart")
+                logger.debug(f"Changes in {event.src_path}. Restart!")
                 self._restart = True
                 self._callback()
     
-def watch_docs() -> None:
-    def restart_bot():
-        logger.info("[LOG] Bot restarting")
-        os.execv(sys.executable, ['python3'] + sys.argv)
-    
-    event_handler = FileChangeHandler(restart_bot)
+def observer_changes(entry_func: Callable) -> None:
+    def on_change_file_callback():
+        os.execv(sys.argv[0], sys.argv[:])
+
+
+    event_handler = FileChangeHandler(on_change_file_callback)
     observer = Observer()
     observer.schedule(event_handler, path='.', recursive=True) 
     observer.start()
 
-    # TODO: Переписать это
-    # try:
-    #     main()
-    # except KeyboardInterrupt:
-    #     observer.stop()
+    try:
+        entry_func()
+    except KeyboardInterrupt:
+        observer.stop()
     observer.join()
     
 
-autoreload = lambda x: x
+autoreload = observer_changes
