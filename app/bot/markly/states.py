@@ -1,0 +1,1 @@
+RECEIVE_DAYS = range(1)

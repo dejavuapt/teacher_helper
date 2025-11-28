@@ -11,7 +11,7 @@ class FileChangeHandler(FileSystemEventHandler):
         self._restart = False
     
     def on_modified(self, event: FileSystemEvent):
-        if (event.is_directory or event.src_path.endswith(".py")) and not event.src_path.__contains__('.venv'):
+        if event.src_path.endswith(".py") and not event.src_path.__contains__('.venv'):
             if not self._restart:
                 logger.debug(f"{event.src_path} have been updated. Restarting bot to apply changes...")
                 self._restart = True 

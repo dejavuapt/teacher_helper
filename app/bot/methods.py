@@ -1,7 +1,6 @@
 from typing import Any
 from datetime import date
 import logging
-from .states import CHOOSING_STUDENTS
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
 
