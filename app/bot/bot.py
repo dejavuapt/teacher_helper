@@ -1,9 +1,10 @@
 import logging
 from telegram import Update
 from telegram.ext import Application 
-from app.bot._exceptions import NullTokenError
+from app.db import init_db
 
 logger = logging.getLogger(__name__)
+
 
 def discover_handlers() -> list:
     from pathlib import Path
@@ -27,9 +28,16 @@ def init_handlers(app: Application) -> None:
         app.add_handler(handler)
 
 def build_run(token: str) -> None:
-    if not token:
-        raise NullTokenError()
-    app: Application = Application.builder().token(token).build()
-    init_handlers(app)
+    try:
+        db_scope = init_db()        
+        app: Application = Application.builder().token(token).build()
+        app.bot_data['db'] = db_scope
+        
+        init_handlers(app)
+
+    except Exception as e:
+        logger.error(str(e))
+        return
+    
     app.run_polling(allowed_updates=Update.ALL_TYPES)
    
