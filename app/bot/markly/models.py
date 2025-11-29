@@ -1,5 +1,5 @@
 from datetime import datetime, date
-from sqlalchemy import String, ForeignKey, Enum
+from sqlalchemy import String, ForeignKey, Enum, UniqueConstraint
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from typing import  Literal, List
 from app.db.engine import Base
@@ -44,6 +44,8 @@ class SchoolDay(Base):
 
     teacher: Mapped[Teacher] = relationship(back_populates="school_days") 
     absences: Mapped[List['Absence']] = relationship(back_populates='school_day')
+
+    __table_args__ = (UniqueConstraint('teacher_id', 'day', name='uq_teacher_day'),)
 
     def __repr__(self) -> str:
         return f"SchoolDay(id={self.id!r}, day={self.day.strftime("%d.%m.%y")!r}, lessons={self.lessons!r})"

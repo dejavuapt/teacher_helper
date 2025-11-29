@@ -27,7 +27,7 @@ def init_db() -> Callable[... , Generator[sqlalchemy.orm.Session, Any, None]]:
         engine = sqlalchemy.engine_from_config(DATABASE_CONFIG, prefix='db.')
         import_models()
         Base.metadata.create_all(engine)
-        Session = sqlalchemy.orm.sessionmaker(bind=engine)
+        Session = sqlalchemy.orm.sessionmaker(bind=engine, expire_on_commit=False)
         
         @contextmanager
         def session_scope():

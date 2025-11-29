@@ -22,7 +22,7 @@ LOGGING: Final[dict[str, Any]] = {
     'disable_existing_loggers': False,
     'formatters': {
         'basic': {
-            'format': '%(asctime)s [%(levelname)s] %(message)s', # %(name)s:%(lineno)s
+            'format': '%(asctime)s [%(levelname)s] %(name)s:%(lineno)s %(message)s', # %(name)s:%(lineno)s
             '()': ColorFormatter,
         },
         'db': {

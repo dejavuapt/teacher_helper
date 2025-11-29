@@ -9,6 +9,8 @@ from telegram.ext import filters
 
 
 handlers = [
+    CommandHandler('start', callbacks.start),
+    CommandHandler('students', callbacks.students, has_args=True),
     ConversationHandler(
         entry_points=[CommandHandler("daily_blanks", callbacks.daily_blanks)],
         states={
