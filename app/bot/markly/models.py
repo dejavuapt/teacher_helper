@@ -1,7 +1,7 @@
 from datetime import datetime, date
 from sqlalchemy import String, ForeignKey, Enum, UniqueConstraint
 from sqlalchemy.orm import relationship, Mapped, mapped_column
-from typing import  Literal, List
+from typing import  Literal, List, Any
 from app.db.engine import Base
 
 Reason = Literal['excused', 'sick', 'cut']
@@ -19,8 +19,6 @@ class Teacher(Base):
     def __repr__(self) -> str:
         return f"Teacher(id={self.id!r}, telegram={self.telegram_id!r}, created_at={self.created_at.strftime("%d.%m.%y, %H:%M:%S")!r})"
 
-# INFO: По сути у одного студента может быть много учителей, но
-# у текущего бизнес процесса именно учителя работают со своими студентами.
 class Student(Base):
     __tablename__ = "students"
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -33,6 +31,10 @@ class Student(Base):
 
     def __repr__(self) -> str:
         return f"Student(id={self.id!r}, name={self.name!r})"
+    
+    def to_dict(self) -> dict[str, Any]:
+        return { c.name: getattr(self, c.name) for c in self.__table__.columns }
+
 
 class SchoolDay(Base):
     __tablename__ = "schooldays"

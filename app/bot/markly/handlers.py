@@ -6,6 +6,7 @@ from telegram.ext import (
     MessageHandler
 )
 from telegram.ext import filters
+from app.bot.markly.models import Student
 
 
 handlers = [
@@ -16,10 +17,11 @@ handlers = [
         states={
             states.RECEIVE_DAYS: [MessageHandler(filters.TEXT, callbacks.receive_days)]
         },
-        fallbacks=[MessageHandler(filters.Regex("оОтмена"), callbacks.cancel)]
+        fallbacks=[MessageHandler(filters.Regex("Отмена"), callbacks.cancel)]
     ),
+    # CallbackQueryHandler(callbacks.student_selected, Student),
     CallbackQueryHandler(callbacks.student_selected, r'^student_'),
     CallbackQueryHandler(callbacks.reason_selected, r'reason_'),
-    CallbackQueryHandler(callbacks.show_students, r'back1show_students'),
+    CallbackQueryHandler(callbacks.show_students, r'back2show_students'),
     CallbackQueryHandler(callbacks.skipped_count, r'all_lessons|specify_count|count_'),
 ]
