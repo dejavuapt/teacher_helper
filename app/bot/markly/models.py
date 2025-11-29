@@ -13,28 +13,11 @@ class Teacher(Base):
     telegram_id: Mapped[str] = mapped_column(String(19), unique=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(default=datetime.now())
 
-    students: Mapped[List["Student"]] = relationship(back_populates="teacher")
+    students: Mapped[List["Student"]] = relationship(back_populates="teacher") # type: ignore
     school_days: Mapped[List["SchoolDay"]] = relationship(back_populates='teacher')
 
     def __repr__(self) -> str:
         return f"Teacher(id={self.id!r}, telegram={self.telegram_id!r}, created_at={self.created_at.strftime("%d.%m.%y, %H:%M:%S")!r})"
-
-class Student(Base):
-    __tablename__ = "students"
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    teacher_id: Mapped[int] = mapped_column(ForeignKey('teachers.id'))
-    
-    name: Mapped[str] = mapped_column(String(50), unique=False, nullable=False)
-    
-    teacher: Mapped[Teacher] = relationship(back_populates="students") 
-    absences: Mapped[List['Absence']] = relationship(back_populates='student')
-
-    def __repr__(self) -> str:
-        return f"Student(id={self.id!r}, name={self.name!r})"
-    
-    def to_dict(self) -> dict[str, Any]:
-        return { c.name: getattr(self, c.name) for c in self.__table__.columns }
-
 
 class SchoolDay(Base):
     __tablename__ = "schooldays"
@@ -62,7 +45,7 @@ class Absence(Base):
         Enum("excused", "sick", "cut", name="reason_enum")
     )
     
-    student: Mapped[Student] = relationship(back_populates="absences")
+    student: Mapped['Student'] = relationship(back_populates="absences") # type: ignore
     school_day: Mapped[SchoolDay] = relationship(back_populates="absences")
 
     def __repr__(self):

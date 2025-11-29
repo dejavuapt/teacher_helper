@@ -10,10 +10,13 @@ from telegram.ext import (
     ContextTypes, 
     ConversationHandler
 )
-from . import messages as msg, states
+
+from app.bot import messages as msg
+from . import states
 from sqlalchemy import select, update, delete, insert
 from sqlalchemy.orm import Session
 from app.bot.markly.models import *
+from app.bot.students.models import Student
 import json
 
 logger = logging.getLogger(__name__)
@@ -32,25 +35,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             await update.message.reply_markdown(msg.REGISTER_OK)
         else:
             await update.message.reply_markdown(msg.REGISTER_FALL)
-
-async def students(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    args = context.args
-    if len(args) == 0:
-        await update.message.reply_markdown(msg.NEED_STUDENTS)
-        return
-    
-    db_scope: Callable[..., Session] = context.application.bot_data.get('db', None)
-    with db_scope() as db:
-        teacher = db.scalar(select(Teacher).where(Teacher.telegram_id == update.effective_user.id))
-        if teacher:
-            for name in args:
-                student = Student(teacher_id=teacher.id,
-                                  name=name)
-                db.add(student)
-            await update.message.reply_markdown(msg.FILL_STUDENTS_OK)
-        else:
-            await update.message.reply_markdown(msg.NO_REGISTRY_ERROR)
-            return
 
 async def markly(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     day: str = date.today()
