@@ -1,11 +1,18 @@
 # CallbackQueryHandler(callbacks.student_selected, r'^student_'),
-from typing import Callable
+from typing import Callable, Final, Any
 import functools
 import logging
+from telegram.ext._handlers.basehandler import BaseHandler
+from telegram.ext import (
+    CallbackQueryHandler,
+    CommandHandler,
+    MessageHandler, 
+    filters
+)
 
 l = logging.getLogger(__name__)
 
-QUERY, COMMAND = range(2)
+QUERY, COMMAND, MESSAGE = range(3)
 class bindablemethod:
     def __init__(self, method: Callable, **options) -> None:
         self._method = method
@@ -31,16 +38,17 @@ class bindablemethod:
 
         return call
 
-class callbacks:    
+class callbacks:
     
     @staticmethod 
     def command(command: str = None):
         def decorator(f: Callable):
             pt = command or f.__name__
+            tp = COMMAND
             opts = {
                 'command': pt,
                 'is_callback': True,
-                'type_callback': COMMAND,
+                'type_callback': tp,
             }
             return bindablemethod(f, **opts)
         return decorator
@@ -49,12 +57,27 @@ class callbacks:
     def query(pattern: str = None):
         def decorator(f: Callable):
             pt = pattern or f.__name__
+            type_callback = QUERY
             opts = {
                 'pattern': pt,
                 'is_callback': True,
-                'type_callback': QUERY,
+                'type_callback': type_callback,
             }
             return bindablemethod(f, **opts)
         return decorator
 
-    
+    @staticmethod 
+    def message(filters: Any):
+        def decorator(f: Callable):
+            if not filters:
+                raise ValueError("Please write a filters in qury callback")
+            pt = filters
+            type_callback = MESSAGE
+            opts = {
+                'filters': pt,
+                'is_callback': True,
+                'type_callback': type_callback,
+            }
+            return bindablemethod(f, **opts)
+        return decorator
+

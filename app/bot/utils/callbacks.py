@@ -3,12 +3,12 @@ from sqlalchemy.orm import Session
 from telegram.ext._handlers.basehandler import BaseHandler
 from telegram.ext import (
     Application,
-    CallbackQueryHandler, CommandHandler
+    CallbackQueryHandler, CommandHandler, MessageHandler
 )
 from app.bot._exceptions import NoneDBScope
 import abc
 import inspect
-from app.bot.utils.decorators import QUERY, COMMAND
+from app.bot.utils.decorators import QUERY, COMMAND, MESSAGE
 import logging
 
 l = logging.getLogger(__name__)
@@ -17,7 +17,8 @@ l = logging.getLogger(__name__)
 class Base(abc.ABC):
     __CALLBACK_MAP: Final[dict[str, Any]] = {
         QUERY: lambda func: CallbackQueryHandler(callback=func, pattern=getattr(func, 'pattern')),
-        COMMAND: lambda func: CommandHandler(callback=func, command=getattr(func, 'command'))
+        COMMAND: lambda func: CommandHandler(callback=func, command=getattr(func, 'command')),
+        MESSAGE: lambda func: MessageHandler(callback=func, filters=getattr(func, 'filters'))
     }
 
     def _get_scope(self, app: Application) -> Callable[..., Session]:
@@ -26,11 +27,12 @@ class Base(abc.ABC):
             raise NoneDBScope()
         return scope
 
+    # TODO: rename to DB_session
     def _get_session(self, app: Application) -> Session:
-        return self._get_scope(app)
+        return self._get_scope(app)()
     
     @classmethod
-    def as_callbacks(cls) -> list[BaseHandler]:
+    def as_handlers(cls) -> list[BaseHandler]:
         """ Use as [{callbacks}] + {callback}.as_callbacks() """
         callbacks: List[BaseHandler] = []
 
