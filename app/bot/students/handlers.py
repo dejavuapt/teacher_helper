@@ -9,7 +9,8 @@ from telegram.ext import (
 
 handlers = StudentCallback.as_handlers() + [ 
     ConversationHandler(
-        entry_points=[CallbackQueryHandler(callback=StudentCallback.edit, pattern=r'student-edit_')],
+        entry_points=[CallbackQueryHandler(callback=StudentCallback.edit, pattern=r'student-edit_'),
+                      CallbackQueryHandler(callback=StudentCallback.add, pattern=r'student-add')],
         states={
             EDIT_NAME: [MessageHandler(filters=filters.TEXT, callback=StudentCallback.name)]
         },

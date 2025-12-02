@@ -33,11 +33,24 @@ class StudentCallback(Base):
     @d.callbacks.command(command='my_students')
     async def test(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await self.students_list(update, context) 
+
+
+    @d.callbacks.query(pattern=r'student-add')
+    async def add(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        query = update.callback_query
+        await query.answer()
+
+        context.user_data['action'] = 'add'
+        await query.edit_message_text(text='write name')
+        return EDIT_NAME
+    
     
     @d.callbacks.query(pattern=r'student-edit_')
     async def edit(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         query = update.callback_query
         await query.answer()
+
+        context.user_data['action'] = 'edit'
         
         student_id = query.data.replace('student-edit_', '')
         selected_student: Student = context.user_data.get('student', {}).get('selected')
@@ -64,21 +77,36 @@ class StudentCallback(Base):
     async def name(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         new_student_name = update.message.text
         student = context.user_data.get('student', {}).get('selected')
-        if not student:
+        action = context.user_data.get('action', '')
+        if not student and action == 'edit':
             l.debug(f'not students sry ...')
             return ConversationHandler.END
+        if action == 'edit':
+            with self._get_session(context.application) as s:
+                s.execute((upd(Student).where(Student.id==student.id).values(name=new_student_name)))
 
-        with self._get_session(context.application) as s:
-            s.execute((upd(Student).where(Student.id==student.id).values(name=new_student_name)))
+                keyboard = [[InlineKeyboardButton('back list', callback_data='students-list'),
+                            InlineKeyboardButton('back student', callback_data=f'student_{student.id}')]]
 
-            keyboard = [[InlineKeyboardButton('back list', callback_data='students-list'),
-                         InlineKeyboardButton('back student', callback_data=f'student_{student.id}')]]
+                await update.message.reply_text(text="succes",
+                                                reply_markup=InlineKeyboardMarkup(keyboard))
+                return ConversationHandler.END
+        
+        if action == 'add':
+            with self._get_session(context.application) as s:
+                teacher = s.scalar(select(Teacher).where(Teacher.telegram_id == update.effective_user.id))
+                if teacher:
+                    st = Student(teacher_id=teacher.id, name=new_student_name)
+                    s.add(st)
+                    l.debug(f'{str(st)} was successfully created')
+                    keyboard: Keyboard = [[InlineKeyboardButton('add new', callback_data='student-add'),
+                                           InlineKeyboardButton('back to list', callback_data='students-list')]]
+                    await update.message.reply_text(text='success add',
+                                                    reply_markup=InlineKeyboardMarkup(keyboard))
+                    return ConversationHandler.END
 
-            await update.message.reply_text(text="succes",
-                                            reply_markup=InlineKeyboardMarkup(keyboard))
-            return ConversationHandler.END
-
-        await update.message.edit_text(text="soryy... something wrong")
+        await update.message.reply_text(text=f"action: {action}, student: {student}")
+        return ConversationHandler.END
 
     @d.callbacks.query(pattern=r'student-delete_')
     async def delete(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -91,7 +119,7 @@ class StudentCallback(Base):
         if selected_student:
             with self._get_session(context.application) as s:
                 s.delete(selected_student)
-                context.user_data['student']['selected'] = None
+                del context.user_data['student']['selected']
 
         keyboard = [[InlineKeyboardButton('back', callback_data='students-list')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -140,11 +168,14 @@ class StudentCallback(Base):
                 return []
             
             students = teacher.students
+            in_col = 1
             for idx, student in enumerate(students):
                 name: str = student.name
-                if idx%3 == 0:
+                if idx%in_col == 0:
                     keyboard.append([])
                     cur_stroke += 1
                 keyboard[cur_stroke].append(InlineKeyboardButton(name, callback_data='student_' + str(student.id)))
+        
+        keyboard.append([InlineKeyboardButton(text='add new', callback_data='student-add')])
 
         return keyboard
