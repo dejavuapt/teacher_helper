@@ -15,7 +15,7 @@ NO_REGISTRY_ERROR: Final[str] = "Извини, но тебя нет в моей 
 
 NEED_STUDENTS: Final[str] = "\nДля работы заполни данные об учениках:\nперечисли их фамилии через пробел: `/students Первый Второй Третий...`"
 
-NO_STUDENTS_ERROR: Final[str] =  NEED_STUDENTS
+NO_STUDENTS_ERROR: Final[str] = NEED_STUDENTS
 REGISTER_OK: Final[str] = "Привет! Рада знакомству :)" + NEED_STUDENTS
 REGISTER_FALL: Final[str] = "Я уже знаю о тебе :)"
 FILL_STUDENTS_OK: Final[str] = "Всё супер! Добавила твоих учеников :)"
