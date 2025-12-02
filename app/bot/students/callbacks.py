@@ -13,11 +13,10 @@ from telegram.ext import (
 )
 from app.bot.markly.models import Teacher
 from app.bot.students.models import Student
-from app.bot import messages as msg
 from app.bot.utils.callbacks import Base
 from app.bot.utils import decorators as d
 
-from datetime import datetime
+from app.bot.locales import get_text as _
 
 import logging
 l = logging.getLogger(__name__)
@@ -41,7 +40,7 @@ class StudentCallback(Base):
         await query.answer()
 
         context.user_data['action'] = 'add'
-        await query.edit_message_text(text='write name')
+        await query.edit_message_text(text=_('texts.students.add'))
         return EDIT_NAME
     
     
@@ -60,17 +59,18 @@ class StudentCallback(Base):
 
         if not '_' in str(student_id):
             keyboard = [
-                [InlineKeyboardButton('edit name', callback_data=f'student-edit_name_{student_id}')],
-                [InlineKeyboardButton('back to student', callback_data=f'student_{student_id}')]
+                [InlineKeyboardButton(_('buttons.students.edits.name'), callback_data=f'student-edit_name_{student_id}')],
+                [InlineKeyboardButton(_('buttons.students.backs.single'), callback_data=f'student_{student_id}')]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            await query.edit_message_text(text=f'edit {selected_student.name} info',
+            await query.edit_message_text(text= _('texts.students.choosen.edit', name=selected_student.name),
                                           parse_mode='Markdown',
                                           reply_markup=reply_markup)
 
         if 'name' in student_id:
             await context.bot.send_message(chat_id=query.message.chat.id,
-                                           text=f"send name for your {selected_student.name} student")
+                                           text=_('texts.students.change.name', name=selected_student.name), 
+                                           parse_mode='MarkdownV2')
             return EDIT_NAME
 
     @d.callbacks.message(filters=filters.TEXT & ~filters.COMMAND)
@@ -85,10 +85,10 @@ class StudentCallback(Base):
             with self._get_session(context.application) as s:
                 s.execute((upd(Student).where(Student.id==student.id).values(name=new_student_name)))
 
-                keyboard = [[InlineKeyboardButton('back list', callback_data='students-list'),
-                            InlineKeyboardButton('back student', callback_data=f'student_{student.id}')]]
+                keyboard = [[InlineKeyboardButton(_('buttons.students.backs.deep_list'), callback_data='students-list'),
+                            InlineKeyboardButton(_('buttons.students.backs.single'), callback_data=f'student_{student.id}')]]
 
-                await update.message.reply_text(text="succes",
+                await update.message.reply_text(text=_('texts.success.edit'),
                                                 reply_markup=InlineKeyboardMarkup(keyboard))
                 return ConversationHandler.END
         
@@ -99,13 +99,13 @@ class StudentCallback(Base):
                     st = Student(teacher_id=teacher.id, name=new_student_name)
                     s.add(st)
                     l.debug(f'{str(st)} was successfully created')
-                    keyboard: Keyboard = [[InlineKeyboardButton('add new', callback_data='student-add'),
-                                           InlineKeyboardButton('back to list', callback_data='students-list')]]
-                    await update.message.reply_text(text='success add',
+                    keyboard: Keyboard = [[InlineKeyboardButton(_('buttons.students.add_more'), callback_data='student-add'),
+                                           InlineKeyboardButton(_('buttons.students.backs.list'), callback_data='students-list')]]
+                    await update.message.reply_text(text=_('texts.success.add'),
                                                     reply_markup=InlineKeyboardMarkup(keyboard))
                     return ConversationHandler.END
 
-        await update.message.reply_text(text=f"action: {action}, student: {student}")
+        l.error(f"action: {action}, student: {student}")
         return ConversationHandler.END
 
     @d.callbacks.query(pattern=r'student-delete_')
@@ -114,16 +114,15 @@ class StudentCallback(Base):
         await query.answer()
 
         selected_student: Student = context.user_data.get('student').get('selected')
-        name: str = selected_student.name
 
         if selected_student:
             with self._get_session(context.application) as s:
                 s.delete(selected_student)
                 del context.user_data['student']['selected']
 
-        keyboard = [[InlineKeyboardButton('back', callback_data='students-list')]]
+        keyboard = [[InlineKeyboardButton(_('buttons.students.backs.list'), callback_data='students-list')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text(text=f'{name} student was deleted',
+        await query.edit_message_text(text=_('texts.students.deleted', name=selected_student.name),
                                       parse_mode='Markdown',
                                       reply_markup=reply_markup)
 
@@ -140,13 +139,14 @@ class StudentCallback(Base):
         # TODO: либо блокать удаление когда есть записи связные либо предупреждать и удалять все связанные записи
         keyboard = [
             [
-                InlineKeyboardButton('edit', callback_data=f'student-edit_{student_id}'),
-                InlineKeyboardButton('delete', callback_data=f'student-delete_{student_id}')],
-            [InlineKeyboardButton('back', callback_data='students-list')]
+                InlineKeyboardButton(_('buttons.students.edits.base'), callback_data=f'student-edit_{student_id}'),
+                InlineKeyboardButton(_('buttons.students.delete'), callback_data=f'student-delete_{student_id}')],
+            [InlineKeyboardButton(_('buttons.students.backs.list'), callback_data='students-list')]
             ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text(text=f'student: {context.user_data.get('student').get('selected').name}',
-                                      parse_mode='Markdown',
+        name = context.user_data.get('student').get('selected').name
+        await query.edit_message_text(text=_('texts.students.choosen.general', name=name),
+                                      parse_mode='MarkdownV2',
                                       reply_markup=reply_markup)
 
     @d.callbacks.query(pattern=r'students-list')
@@ -155,7 +155,7 @@ class StudentCallback(Base):
         # await query.answer() # comment cuz it's entry point ofcs
 
         reply_markup = InlineKeyboardMarkup(self._students_in_keyboard(context.application, update.effective_user.id)) 
-        data = {'text': 'choose student:',
+        data = {'text': _('texts.students.list'),
                 'reply_markup': reply_markup}
         await (query.edit_message_text(**data) if query else update.message.reply_text(**data))
 
@@ -171,11 +171,13 @@ class StudentCallback(Base):
             in_col = 1
             for idx, student in enumerate(students):
                 name: str = student.name
+                name = name.split(' ')
+                short_name: str = str(name[0]) + ' ' + '.'.join([el.capitalize()[0] for el in name[1:]]) + ('.' if len(name) > 2 else '')
                 if idx%in_col == 0:
                     keyboard.append([])
                     cur_stroke += 1
-                keyboard[cur_stroke].append(InlineKeyboardButton(name, callback_data='student_' + str(student.id)))
+                keyboard[cur_stroke].append(InlineKeyboardButton(short_name, callback_data='student_' + str(student.id)))
         
-        keyboard.append([InlineKeyboardButton(text='add new', callback_data='student-add')])
+        keyboard.append([InlineKeyboardButton(text=_('buttons.students.add'), callback_data='student-add')])
 
         return keyboard
