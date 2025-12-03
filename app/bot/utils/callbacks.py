@@ -30,6 +30,15 @@ class Base(abc.ABC):
     # TODO: rename to DB_session
     def _get_session(self, app: Application) -> Session:
         return self._get_scope(app)()
+
+    # TODO: придумать чето умное 
+    @classmethod
+    def _get_session(cls, app: Application) -> Session:
+        scope = app.bot_data.get('db', None)
+        if not scope:
+            raise NoneDBScope()
+        return scope()
+
     
     @classmethod
     def as_handlers(cls) -> list[BaseHandler]:

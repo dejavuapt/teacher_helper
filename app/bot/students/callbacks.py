@@ -11,9 +11,10 @@ from telegram.ext import (
     filters,
     ConversationHandler
 )
-from app.bot.markly.models import Teacher
+from app.bot.absences.models import Teacher, SchoolDay, Absence
 from app.bot.students.models import Student
 from app.bot.utils.callbacks import Base
+from app.bot.utils.types import Keyboard
 from app.bot.utils import decorators as d
 
 from app.bot.locales import get_text as _
@@ -21,7 +22,6 @@ from app.bot.locales import get_text as _
 import logging
 l = logging.getLogger(__name__)
 
-Keyboard = List[List[InlineKeyboardButton]]
 
 EDIT_NAME = 101
 
@@ -31,6 +31,11 @@ class StudentCallback(Base):
 
     @d.callbacks.command(command='my_students')
     async def test(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        if update.effective_message:
+            try:
+                update.effective_message.delete()
+            except Exception as e:
+                l.error(str(e))
         await self.students_list(update, context) 
 
 
@@ -154,14 +159,17 @@ class StudentCallback(Base):
         query = update.callback_query
         # await query.answer() # comment cuz it's entry point ofcs
 
-        reply_markup = InlineKeyboardMarkup(self._students_in_keyboard(context.application, update.effective_user.id)) 
+        reply_markup = InlineKeyboardMarkup(StudentCallback._students_in_keyboard(context.application, update.effective_user.id)) 
         data = {'text': _('texts.students.list'),
                 'reply_markup': reply_markup}
         await (query.edit_message_text(**data) if query else update.message.reply_text(**data))
 
-    def _students_in_keyboard(self, app: Application, user_id: str) -> Keyboard:
+    @classmethod
+    def _students_in_keyboard(cls, app: Application,
+                              user_id: str, prefix: str = 'student_', 
+                              info: str | None = None, context: ContextTypes.DEFAULT_TYPE | None = None) -> Keyboard:
         keyboard: Keyboard = []
-        with self._get_session(app) as session:
+        with cls._get_session(app) as session:
             cur_stroke: int = -1  
             teacher = session.scalar(select(Teacher).where(Teacher.telegram_id == user_id))
             if not teacher:
@@ -173,10 +181,16 @@ class StudentCallback(Base):
                 name: str = student.name
                 name = name.split(' ')
                 short_name: str = str(name[0]) + ' ' + '.'.join([el.capitalize()[0] for el in name[1:]]) + ('.' if len(name) > 2 else '')
+                if info == 'absences' and context:
+                    day: SchoolDay = context.user_data.get('school_day')
+                    absences_by_day: Absence = session.scalar(select(Absence).where(Absence.schoolday_id==day.id).where(Absence.student_id==student.id))
+                    if absences_by_day:
+                        short_name += f" {absences_by_day.number}/{day.lessons}"
+
                 if idx%in_col == 0:
                     keyboard.append([])
                     cur_stroke += 1
-                keyboard[cur_stroke].append(InlineKeyboardButton(short_name, callback_data='student_' + str(student.id)))
+                keyboard[cur_stroke].append(InlineKeyboardButton(short_name, callback_data=prefix + str(student.id)))
         
         keyboard.append([InlineKeyboardButton(text=_('buttons.students.add'), callback_data='student-add')])
 
