@@ -16,6 +16,8 @@
 #     "toml>=0.10.2",
 #     "watchdog==6.0.0",
 #     "sqlalchemy>=2.0.44",
+#     "pandas>=2.3.3",
+#     "xlsxwriter",
 # ]
 # ///
 
