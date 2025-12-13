@@ -1,4 +1,4 @@
-from app.bot.students.callbacks import StudentCallback, EDIT_NAME
+from app.bot.modules.students.callbacks import StudentCallback, EDIT_NAME
 from telegram.ext import (
     CommandHandler,
     ConversationHandler,

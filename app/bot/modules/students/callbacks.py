@@ -11,8 +11,8 @@ from telegram.ext import (
     filters,
     ConversationHandler
 )
-from app.bot.absences.models import Teacher, SchoolDay, Absence
-from app.bot.students.models import Student
+from app.bot.modules.absences.models import Teacher, SchoolDay, Absence
+from app.bot.modules.students.models import Student
 from app.bot.utils.callbacks import Base
 from app.bot.utils.types import Keyboard
 from app.bot.utils import decorators as d

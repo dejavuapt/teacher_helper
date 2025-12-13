@@ -12,14 +12,14 @@ from telegram.ext import (
 )
 from sqlalchemy import select, update, delete, insert
 from sqlalchemy.orm import Session
-from app.bot.absences.models import *
-from app.bot.students.models import Student
+from app.bot.modules.absences.models import *
+from app.bot.modules.students.models import Student
 import json
 from app.bot.utils.callbacks import Base
 from app.bot.utils import decorators as d
 from app.bot.locales import get_text as _
 from app.bot.utils.types import Keyboard, Button
-from app.bot.students.callbacks import StudentCallback
+from app.bot.modules.students.callbacks import StudentCallback
 
 logger = logging.getLogger(__name__)
 

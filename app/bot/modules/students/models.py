@@ -1,7 +1,7 @@
 from sqlalchemy import String, ForeignKey
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from typing import  List, Any
-from app.bot.absences.models import Teacher, Absence
+from app.bot.modules.absences.models import Teacher, Absence
 from app.db.engine import Base
 
 class Student(Base):

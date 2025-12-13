@@ -5,7 +5,7 @@ from telegram.ext import (
     MessageHandler
 )
 from telegram.ext import filters
-from app.bot.absences.callbacks import AbsencesCallbacks, FillAbsencesCallbacks
+from app.bot.modules.absences.callbacks import AbsencesCallbacks, FillAbsencesCallbacks
 
 
 handlers = AbsencesCallbacks.as_handlers() + FillAbsencesCallbacks.as_handlers() + []
