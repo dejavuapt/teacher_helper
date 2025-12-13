@@ -34,15 +34,14 @@ class AbsencesCallbacks(Base):
     async def entry(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if update.effective_message:
             try:
-                update.effective_message.delete()
+                await update.effective_message.delete()
             except Exception as e:
                 logger.error(str(e))
 
-        keyboard: Keyboard = [[Button(_('buttons.absences.do.fill'), callback_data=f'fill_absences')],]
-                            #   [Button(_('buttons.absences.do.stats'), callback_data=''), Button(_('buttons.absences.do.edit'), callback_data='')]]
+        keyboard: Keyboard = [[Button(_('buttons.absences.do.fill'), callback_data=f'fill_absences')],
+                              [Button(_('buttons.absences.do.stats'), callback_data=f'absences-stats'), ]] # Button(_('buttons.absences.do.edit'), callback_data='')
         await update.message.reply_text(_('texts.absences.do'),
                                         reply_markup=InlineKeyboardMarkup(keyboard))
-
 
 
 class FillAbsencesCallbacks(Base):
@@ -73,7 +72,10 @@ class FillAbsencesCallbacks(Base):
         data = query.data.replace('fill_today', '')
 
         with self._get_session(context.application) as s:
-            school_day = s.scalar(select(SchoolDay).where(SchoolDay.day==date_by_context and SchoolDay.teacher_id==update.effective_user.id))
+            teacher = s.scalar(select(Teacher).where(Teacher.telegram_id == update.effective_user.id))
+            school_day = s.scalar(select(SchoolDay).where(SchoolDay.day==date_by_context).where(SchoolDay.teacher_id==teacher.id))
+            logger.warning(f"{date_by_context} | {teacher.id} | {school_day}")
+            
                     
             if data == '': 
                 if not school_day: 
@@ -89,7 +91,7 @@ class FillAbsencesCallbacks(Base):
             else: 
                 try: 
                     data = int(data)
-                    school_day = SchoolDay(teacher_id=update.effective_user.id,
+                    school_day = SchoolDay(teacher_id=teacher.id,
                                            day=date_by_context,
                                            lessons=data)
                     s.add(school_day)
