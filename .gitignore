@@ -12,3 +12,6 @@ wheels/
 # Enviroments
 .env
 *.db
+
+# IDE
+.vscode/
