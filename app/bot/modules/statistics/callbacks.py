@@ -1,6 +1,5 @@
 from app.bot.utils.callbacks import Base
-from app.bot.modules.students.models import Student
-from app.bot.modules.absences.models import Absence, SchoolDay, Teacher, Reason
+from app.bot.modules.absences.models import Absence, SchoolDay, Teacher
 from app.bot.utils import decorators as d
 from telegram import Update, InlineKeyboardMarkup
 from telegram.ext import (
@@ -10,14 +9,12 @@ from sqlalchemy import select
 from app.bot.utils.types import Keyboard, Button
 from app.bot.locales import get_text as _
 import pandas as pd
+import numpy as np
 from io import BytesIO
 import datetime
 
 
 class StatisticsCallbacks(Base):
-    # @d.callbacks.command(command='get_absences')
-    # async def entry(update: Update, context: ContextTypes.DEFAULT_CONTEXT) -> None:
-    # keyboard: Keyboard = [[Button()]]
 
     @d.callbacks.query(pattern=r"absences-stats")
     async def absences_stats(
@@ -66,15 +63,15 @@ class StatisticsCallbacks(Base):
 
         students = [s.name for s in teacher.students]
 
-        empty_data = pd.DataFrame(index=students, columns=columns[1:])
+        empty_data = pd.DataFrame(dtype=np.int16, index=students, columns=columns[1:])
         df = empty_data
 
-        # TODO: заполнить пустые данными по кол-ву пропусков
+        # TODO: Когда появится redis, то закэшировать генерацию данных
         for date, sub_df in df.groupby(level=0, axis=1):
             if not isinstance(date, datetime.date):
                 break
 
-            students_with_skips: list[Absence] = (
+            absences: list[Absence] = (
                 session.execute(
                     select(Absence, SchoolDay)
                     .select_from(Absence)
@@ -86,14 +83,15 @@ class StatisticsCallbacks(Base):
                 .all()
             )
 
-            for a in students_with_skips:
-                assert a.reason
-                df.loc[
-                    [a.student.name],
-                    [(date, map_reason.get(a.reason))],
-                ] = a.number
+            for a in absences:
+                r = map_reason.get(a.reason)
+                row_idx = [a.student.name]
+                col_idx = [[(_("table.total"), r)], [(date, r)]]
 
-        # TODO: закэшировать получение данных на день, не пересчитывая
+                df.loc[
+                    row_idx,
+                    col_idx[1],
+                ] = a.number
 
         output = BytesIO()
         writer = pd.ExcelWriter(output, engine="xlsxwriter")
