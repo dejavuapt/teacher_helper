@@ -1,0 +1,5 @@
+services:
+  bot:
+    image: ghcr.io/dejavuapt/teachio:latest
+    env_file:
+      - .env.prod
