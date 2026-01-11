@@ -1,4 +1,4 @@
-from os import getenv, path
+from os import getenv, path, getcwd
 import logging
 import logging.config
 import dotenv
@@ -7,16 +7,11 @@ from app.utils.logging import ColorFormatter
 
 dotenv.load_dotenv(path.join('.env'))
 
-PROD: bool = bool(int(getenv("IS_PROD", 0)))
 TG_BOT_TOKEN: str = getenv("TG_BOT_TOKEN", '')
 
-DEBUG: bool = bool(int(getenv("IS_DEBUG", 0)))
-
-if DEBUG:
-    import debugpy
-
-    DEBUG_HOST, DEBUG_PORT = getenv("DEBUG_ADDR", '0.0.0.0:5678').split(':')
-    debugpy.listen((DEBUG_HOST, int(DEBUG_PORT)))
+DEBUG: bool = bool(int(getenv("DEBUG", 0)))
+DEBUG_HOST, DEBUG_PORT = getenv("DEBUG_ADDR", '0.0.0.0:5678').split(':')
+DEBUG_ARGV: list = [f"{getcwd()}/teachio.sh", '--dev','run']
 
 DATABASE_URL: Final[str] = 'sqlite:///teachio.db'
 

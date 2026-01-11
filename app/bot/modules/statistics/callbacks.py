@@ -71,6 +71,7 @@ class StatisticsCallbacks(Base):
             if not isinstance(date, datetime.date):
                 break
 
+
             absences: list[Absence] = (
                 session.execute(
                     select(Absence, SchoolDay)

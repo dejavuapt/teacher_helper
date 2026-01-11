@@ -1,0 +1,17 @@
+services:
+  bot:
+    image: teachio/bot
+    container_name: teachio_bot
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - ./dev/.env
+    volumes:
+      - .:/code
+    ports:
+      - "5678:5678"
+    # develop:
+    #   watch:
+    #     - path: ./app
+    #       action: rebuild

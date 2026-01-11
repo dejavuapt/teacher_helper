@@ -1,10 +1,11 @@
 FROM python:3.13-slim
 
 COPY ./pyproject.toml .
-RUN pip install uv && uv pip install --system -r pyproject.toml && pip cache purge && uv cache clean
+RUN pip install uv 
+RUN uv pip install --system -r pyproject.toml 
+RUN pip cache purge && uv cache clean
 
 WORKDIR /code
 COPY . /code
 
-CMD ["/code/.dockerinit.sh"]
-
+CMD ["/code/teachio.sh", "--dev", "run"]
